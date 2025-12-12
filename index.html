@@ -168,55 +168,126 @@ button {
 
 <h2>Your Collection</h2>
 <div id="collection"></div>
+let gems = parseInt(localStorage.getItem("gems")) || 0;
+let cardCollection = JSON.parse(localStorage.getItem("cardCollection")) || [];
 
-<script>
-/***********************
- * PLAYER SYSTEM
- ***********************/
-let player = {
-  gems: 100,
-  monsters: []
+// ---------------------------
+// CARD POOL
+// ---------------------------
+const cards = {
+    common: [
+        { name: "Forest Sprite", rarity: "Common", image: "images/common1.png", attack: 5, hp: 20 },
+        { name: "Cave Goblette", rarity: "Common", image: "images/common2.png", attack: 6, hp: 18 },
+        { name: "Slime Maiden", rarity: "Common", image: "images/common3.png", attack: 4, hp: 22 }
+    ],
+    rare: [
+        { name: "Red Oni", rarity: "Rare", image: "images/rare1.png", attack: 12, hp: 30 }
+    ],
+    superrare: [
+        { name: "Storm Harpy", rarity: "Super Rare", image: "images/sr1.png", attack: 18, hp: 35 }
+    ],
+    megarare: [
+        { name: "Abyssal Naga", rarity: "Mega Rare", image: "images/mr1.png", attack: 25, hp: 45 }
+    ],
+    ultrarare: [
+        {
+            name: "Dark Maiden Lilith",
+            rarity: "Ultra Rare",
+            image: "https://raw.githubusercontent.com/GonjaDrop/monster-girl-game/refs/heads/main/file_00000000dc2871fda0c2ee699123839e.png",
+            attack: 45,
+            hp: 80
+        }
+    ]
 };
 
-// Load save data
-let save = localStorage.getItem("MG_Save");
-if (save) player = JSON.parse(save);
+// ---------------------------
+// GIVE NEW PLAYERS 2 COMMON CARDS
+// ---------------------------
+function giveStarterCards() {
+    if (localStorage.getItem("starterGiven")) return;  // already received
 
-function saveGame() {
-  localStorage.setItem("MG_Save", JSON.stringify(player));
+    let starter1 = cards.common[Math.floor(Math.random() * cards.common.length)];
+    let starter2 = cards.common[Math.floor(Math.random() * cards.common.length)];
+
+    cardCollection.push(starter1, starter2);
+
+    localStorage.setItem("cardCollection", JSON.stringify(cardCollection));
+    localStorage.setItem("starterGiven", "true");
+
+    alert("You received 2 starter Common cards!");
 }
 
-/***********************
- * MONSTER CARDS
- ***********************/
-const cards = [
-  { name: "Cursed Maiden Elise", rarity: "rare", img: "https://picsum.photos/300/450?random=11", hp: 90, atk: 18 },
-  { name: "Hollow Witch Serana", rarity: "super", img: "https://picsum.photos/300/450?random=12", hp: 140, atk: 32 },
-  { name: "Ashen Knight Marielle", rarity: "mega", img: "https://picsum.photos/300/450?random=13", hp: 200, atk: 50 },
+// Run the starter check when game loads
+giveStarterCards();
 
-  /* ULTRA RARE LILITH */
-  {
-    name: "Dark Maiden Lilith",
-    rarity: "ultra",
-    img: "https://raw.githubusercontent.com/GonjaDrop/monster-girl-game/refs/heads/main/file_00000000dc2871fda0c2ee699123839e.png",
-    hp: 350,
-    atk: 80,
-    animated: true
-  }
-];
-
-/***********************
- * RARITY PULL RATES
- ***********************/
-function pullRarity() {
-  let roll = Math.random() * 100;
-  if (roll < 60) return "rare";
-  if (roll < 85) return "super";
-  if (roll < 97) return "mega";
-  return "ultra";
+// ---------------------------
+// UPDATE DISPLAY
+// ---------------------------
+function updateDisplay() {
+    document.getElementById("gems").textContent = gems;
+    document.getElementById("cardCount").textContent = cardCollection.length;
 }
 
-/***********************
- * FLASH EFFECT
- ***********************/
-function flashEffect() {
+updateDisplay();
+
+// ---------------------------
+// SUMMONING
+// ---------------------------
+function summonCard() {
+    if (gems < 10) {
+        alert("Not enough gems!");
+        return;
+    }
+
+    gems -= 10;
+
+    let roll = Math.random();
+    let rarity;
+
+    if (roll < 0.60) rarity = "common";
+    else if (roll < 0.80) rarity = "rare";
+    else if (roll < 0.93) rarity = "superrare";
+    else if (roll < 0.98) rarity = "megarare";
+    else rarity = "ultrarare";
+
+    let pool = cards[rarity];
+    let card = pool[Math.floor(Math.random() * pool.length)];
+
+    cardCollection.push(card);
+
+    localStorage.setItem("gems", gems);
+    localStorage.setItem("cardCollection", JSON.stringify(cardCollection));
+
+    updateDisplay();
+
+    alert("You summoned: " + card.name + " (" + card.rarity + ")");
+}
+
+// ---------------------------
+// SIMPLE BATTLE FOR GEMS
+// ---------------------------
+function battle() {
+    if (cardCollection.length === 0) {
+        alert("You need at least one card!");
+        return;
+    }
+
+    let randomCard = cardCollection[Math.floor(Math.random() * cardCollection.length)];
+
+    let enemyHP = 20 + Math.floor(Math.random() * 15);
+    let playerAttack = randomCard.attack;
+
+    if (playerAttack >= enemyHP) {
+        let reward = 5 + Math.floor(Math.random() * 10);
+        gems += reward;
+        alert(`Your ${randomCard.name} defeated the enemy! You earned ${reward} gems!`);
+    } else {
+        alert(`Your ${randomCard.name} was too weak… no gems earned.`);
+    }
+
+    localStorage.setItem("gems", gems);
+    updateDisplay();
+}
+
+
+  
