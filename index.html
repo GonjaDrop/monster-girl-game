@@ -1,44 +1,78 @@
-<!-- Sexy Monster Girls: Mobile Web Game (non-explicit, age-gated)
+<!-- Sexy Monster Girls: Mobile Web Game — Upgraded
 
-This is a single-file mobile-friendly web game you can open in your phone browser.
-Features:
-- Age gate (18+ confirmation)
-- Gacha summon with rarities: Normal, Rare, Super Rare, Mega Rare, Ultra Rare
-- Simple card objects with name, HP, ATK, rarity
-- Collection stored in localStorage
-- Quick simulated battle vs random monster
-- Art placeholders (you MUST replace with your own artwork that is appropriate and owned by you)
+Improvements in this build:
+- Better responsive UI
+- Summon animation (spark + card pop)
+- Card flip animation when inspecting cards
+- Ultra Rare cards have motion (floating + shine)
+- Space for high-quality images (replace placeholders with your own art URLs)
+- Still age-gated and non-explicit by default
+
+How to use:
+- Replace placeholder image URLs in the `basePool` with your own hosted images.
+- Paste this as index.html in your GitHub repo and commit. GitHub Pages will update automatically.
 
 Notes:
-- This project purposefully avoids explicit sexual content. Keep all art suggestive/PG-13 if you plan to distribute.
-- To run: save this as index.html, open it in a mobile browser, or host it.
+- Keep any art you upload compliant with hosting rules. Avoid explicit sexual content if you plan to share publicly.
 --><!doctype html>
 
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Summon Maidens - Mobile Gacha</title>
+  <title>Summon Maidens — Upgraded</title>
   <style>
-    :root{--bg:#0b1020;--card:#0f1724;--muted:#9aa4bf;--accent:#ff7ab6}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#07101f 0%, #081427 100%);color:#e6eef8}
-    .app{max-width:720px;margin:0 auto;padding:12px}
+    :root{
+      --bg1:#07101f; --bg2:#081427; --card:#0f1724; --muted:#9aa4bf; --accent:#ff7ab6; --gold:#ffd36b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef8;-webkit-font-smoothing:antialiased}
+    .app{max-width:900px;margin:0 auto;padding:14px}
     header{display:flex;align-items:center;gap:12px}
     h1{font-size:20px;margin:0}
-    .age-gate{position:fixed;inset:0;background:rgba(2,6,23,0.95);display:flex;align-items:center;justify-content:center;padding:20px}
-    .panel{background:linear-gradient(180deg,var(--card),#0b1330);border-radius:12px;padding:16px;width:100%;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-    .btn{background:var(--accent);border:none;padding:10px 14px;border-radius:10px;color:#081427;font-weight:700}
-    .muted{color:var(--muted);font-size:13px}
-    .row{display:flex;gap:8px;align-items:center}
-    .summon-area{margin-top:12px;display:flex;gap:8px}
-    .card{background:linear-gradient(180deg,#0f1a2b,#081427);padding:10px;border-radius:10px;min-width:110px;text-align:center}
-    .art{height:130px;border-radius:8px;background:linear-gradient(180deg,#081427,#0b1330);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
-    .rarity{font-weight:800;padding:6px;border-radius:8px;margin-top:8px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
-    .small{font-size:12px;color:var(--muted)}
-    .log{margin-top:10px;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;height:72px;overflow:auto;font-size:13px}
-    footer{margin-top:14px;text-align:center;color:var(--muted);font-size:12px}
-    @media(min-width:640px){h1{font-size:22px}}
+    .muted{color:var(--muted);font-size:13px}/* panel */
+.panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:14px;padding:14px;margin-top:12px;box-shadow:0 12px 30px rgba(2,6,23,0.6)}
+.row{display:flex;gap:10px;align-items:center}
+.btn{background:linear-gradient(180deg,var(--accent),#ff5fa0);border:none;padding:10px 14px;border-radius:12px;color:#081427;font-weight:800;cursor:pointer;box-shadow:0 6px 18px rgba(255,122,182,0.12)}
+.btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:700}
+.controls{display:flex;gap:8px;align-items:center}
+
+/* collection grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:12px}
+.card{background:linear-gradient(180deg,#0b1624,#071225);border-radius:12px;padding:10px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.03)}
+.card .image{height:190px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#081425}
+.card .image img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s ease}
+.card .meta{margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+.rarity{padding:6px 8px;border-radius:999px;font-weight:800}
+.small{font-size:13px;color:var(--muted)}
+
+/* summon animation overlay */
+.overlay{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:60}
+.summon-panel{width:92%;max-width:520px;background:linear-gradient(180deg,#081427,#06121f);border-radius:14px;padding:16px;text-align:center;box-shadow:0 20px 80px rgba(3,6,15,0.7)}
+.particles{position:relative;height:220px}
+.spark{position:absolute;width:18px;height:18px;border-radius:50%;filter:blur(6px);opacity:0;animation:burst 1.2s ease-out forwards}
+@keyframes burst{0%{transform:scale(.2);opacity:1}60%{opacity:1;transform:scale(1.1)}100%{transform:scale(0.6);opacity:0}}
+
+/* pop card */
+.summon-card{width:180px;height:260px;margin:6px auto;background:linear-gradient(180deg,#0f2030,#081427);border-radius:12px;padding:8px;box-shadow:0 12px 40px rgba(0,0,0,0.6);transform-origin:center center;animation:cardPop .9s cubic-bezier(.18,.9,.23,1)}
+@keyframes cardPop{0%{transform:scale(.2) rotateX(-60deg);opacity:0}50%{transform:scale(1.05) rotateX(10deg);opacity:1}100%{transform:scale(1) rotateX(0)} }
+
+/* flip inspector */
+.flip-wrap{perspective:1400px}
+.flip{width:100%;height:100%;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.2,.9,.28,1);position:relative}
+.flip.is-flipped{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:8px;overflow:hidden}
+.face.back{transform:rotateY(180deg);background:linear-gradient(180deg,#081427,#04101a);display:flex;align-items:center;justify-content:center;color:var(--muted);padding:12px}
+
+/* ultra rare motion */
+.ultra{animation:float 4s ease-in-out infinite;box-shadow:0 15px 40px rgba(255,122,182,0.12), inset 0 -6px 18px rgba(255,218,140,0.04)}
+@keyframes float{0%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-10px) rotate(2deg)}100%{transform:translateY(0) rotate(-1deg)}}
+.shine{position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg, rgba(255,255,255,0.06), rgba(255,255,255,0.18) 40%, rgba(255,255,255,0.02));transform:translateX(-120%);transition:transform .9s ease}
+.summon-card.shiny .shine{transform:translateX(120%)}
+
+/* responsive */
+@media(min-width:720px){h1{font-size:22px}}
+
   </style>
 </head>
 <body>
@@ -46,11 +80,11 @@ Notes:
     <header>
       <h1>Summon Maidens</h1>
       <div style="flex:1"></div>
-      <div class="muted">Collection: <span id="collection-count">0</span></div>
-    </header><div class="panel" id="main-panel">
-  <div class="row" style="justify-content:space-between">
+      <div class="muted">Collection: <strong id="collection-count">0</strong></div>
+    </header><div class="panel">
+  <div class="row" style="justify-content:space-between;align-items:center">
     <div>
-      <div class="small">Currency:</div>
+      <div class="small">Currency</div>
       <div style="font-weight:800">Gems: <span id="gems">100</span></div>
     </div>
     <div style="text-align:right">
@@ -59,37 +93,72 @@ Notes:
     </div>
   </div>
 
-  <div class="summon-area">
-    <button class="btn" id="summon">Summon (1x)</button>
-    <button class="btn" id="summon10">Summon (10x)</button>
+  <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+    <div class="controls">
+      <button class="btn" id="summon">Summon (1x)</button>
+      <button class="btn" id="summon10">Summon (10x)</button>
+    </div>
     <div style="flex:1"></div>
-    <button class="btn" id="clear">Reset Collection</button>
+    <button class="btn secondary" id="reset">Reset Collection</button>
   </div>
 
-  <div class="log" id="log">Welcome — confirm age to start.</div>
+  <div class="small" style="margin-top:10px;color:var(--muted)">Tip: Replace placeholder art in the code with higher-quality images hosted on a static host (Imgbb, GitHub, or your own server).</div>
 
   <div class="grid" id="collection"></div>
-
-  <div style="margin-top:12px" class="row">
-    <button class="btn" id="battle">Quick Battle vs Random Monster</button>
-    <div style="flex:1"></div>
-    <div class="small">Tip: Replace placeholder art with your own images.</div>
-  </div>
 </div>
 
-<footer>Age-gated content. Keep art non-explicit if you share publicly.</footer>
+<div style="height:18px"></div>
+<div class="muted">Age-gated content. Keep art non-explicit if you plan to share publicly.</div>
 
-  </div>  <div class="age-gate" id="ageGate">
-    <div class="panel" style="max-width:420px;text-align:center">
+  </div>  <!-- Age gate modal -->  <div class="overlay" id="ageGate">
+    <div class="summon-panel" style="max-width:420px">
       <h2>Age Confirmation</h2>
-      <p class="muted">This game contains suggestive character art. You must be 18+ to continue. No explicit sexual content is included.</p>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <div class="small" style="margin-top:6px">This game contains suggestive character art. You must be 18+ to continue. No explicit sexual content is included.</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px">
         <button class="btn" id="confirmAge">I'm 18+</button>
-        <button class="btn" id="denyAge">I'm under 18</button>
+        <button class="btn secondary" id="denyAge">I'm under 18</button>
       </div>
     </div>
-  </div>  <script>
-    // Rarity configuration (probabilities out of 1000)
+  </div>  <!-- Summon overlay (used during summoning) -->  <div class="overlay" id="summonOverlay" style="display:none">
+    <div class="summon-panel">
+      <div class="particles" id="particles"></div>
+      <div class="summon-card" id="summonCard">
+        <div class="image" id="summonImage" style="position:relative">
+          <div class="shine"></div>
+          <img id="summonImgTag" src="https://picsum.photos/seed/default/400/600" alt="summon" />
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div id="summonText" style="font-weight:800;font-size:18px">Summoning...</div>
+        <div class="small" style="margin-top:6px;color:var(--muted)" id="summonSub">Good luck!</div>
+        <div style="margin-top:12px"><button class="btn" id="closeSummon">Close</button></div>
+      </div>
+    </div>
+  </div>  <template id="cardTmpl">
+    <div class="card">
+      <div class="flip-wrap" style="height:240px">
+        <div class="flip">
+          <div class="face front">
+            <div class="image"><img src="https://picsum.photos/seed/1/400/600" alt="art"/></div>
+          </div>
+          <div class="face back">
+            <div style="text-align:left">
+              <div style="font-weight:800;font-size:16px">NAME</div>
+              <div class="small" style="margin-top:8px">Rarity: RARITY</div>
+              <div class="small">HP: HP | ATK: ATK</div>
+              <div style="height:8px"></div>
+              <div class="small">Click to flip back.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="meta">
+        <div style="font-weight:700">NAME</div>
+        <div class="rarity">RARITY</div>
+      </div>
+    </div>
+  </template>  <script>
+    // Rarity table and colors
     const rarityTable = [
       {key:'Normal', prob:700, color:'#9aa4bf'},
       {key:'Rare', prob:200, color:'#7fd3ff'},
@@ -98,87 +167,87 @@ Notes:
       {key:'Ultra Rare', prob:2, color:'#ff7ab6'}
     ];
 
+    // Base monsters - replace `img` values with your own hosted images
     const basePool = [
-      // Simple sample monsters; replace or expand
-      {name:'Coblyn', hp:20, atk:4, art:'placeholder1.jpg'},
-      {name:'Frost Nymph', hp:24, atk:6, art:'placeholder2.jpg'},
-      {name:'Ember Siren', hp:30, atk:8, art:'placeholder3.jpg'},
-      {name:'Void Succubus', hp:36, atk:10, art:'placeholder4.jpg'},
-      {name:'Celestial Bride', hp:45, atk:12, art:'placeholder5.jpg'}
+      {name:'Coblyn', hp:20, atk:4, img:'https://picsum.photos/seed/cob/500/700'},
+      {name:'Frost Nymph', hp:24, atk:6, img:'https://picsum.photos/seed/frost/500/700'},
+      {name:'Ember Siren', hp:30, atk:8, img:'https://picsum.photos/seed/ember/500/700'},
+      {name:'Void Succubus', hp:36, atk:10, img:'https://picsum.photos/seed/void/500/700'},
+      {name:'Celestial Bride', hp:45, atk:12, img:'https://picsum.photos/seed/cel/500/700'}
     ];
 
-    // Utilities
-    function pickRarity(){
-      const roll = Math.floor(Math.random()*1000)+1;
-      let acc=0;
-      for(const r of rarityTable){acc+=r.prob; if(roll<=acc) return r.key}
-      return 'Normal';
-    }
+    // helpers
+    function pickRarity(){ const roll=Math.floor(Math.random()*1000)+1; let acc=0; for(const r of rarityTable){ acc+=r.prob; if(roll<=acc) return r.key } return 'Normal' }
+    function weightedMonsterForRarity(rarity){ const pool = basePool.map((m,i)=>({ ...m, weight:(i+1)*(rarity==='Ultra Rare'?6:rarity==='Mega Rare'?4:rarity==='Super Rare'?2:1)})); const total = pool.reduce((s,p)=>s+p.weight,0); let r=Math.random()*total; for(const p of pool){ if(r<p.weight) return {...p}; r-=p.weight } return {...pool[0]} }
 
-    function weightedMonsterForRarity(rarity){
-      // Simple mapping: higher rarities favor stronger pool entries
-      const pool = basePool.map((m,i)=>({ ...m, weight: (i+1) * (rarity==='Ultra Rare'?5:rarity==='Mega Rare'?3:rarity==='Super Rare'?2:1)}));
-      const total = pool.reduce((s,p)=>s+p.weight,0);
-      let r=Math.random()*total; for(const p of pool){if(r<p.weight) return {...p}; r-=p.weight}
-      return {...pool[0]};
-    }
-
-    // Game state
+    // state
     let gems = parseInt(localStorage.getItem('gems')||100,10);
     const collection = JSON.parse(localStorage.getItem('collection')||'[]');
 
-    const logEl = document.getElementById('log');
     const gemsEl = document.getElementById('gems');
     const collectionEl = document.getElementById('collection');
     const collCountEl = document.getElementById('collection-count');
+    const summonOverlay = document.getElementById('summonOverlay');
+    const summonImgTag = document.getElementById('summonImgTag');
+    const summonText = document.getElementById('summonText');
+    const summonSub = document.getElementById('summonSub');
+    const summonCard = document.getElementById('summonCard');
+    const particlesEl = document.getElementById('particles');
 
-    function saveState(){ localStorage.setItem('gems',gems); localStorage.setItem('collection',JSON.stringify(collection)); }
-    function render(){ gemsEl.textContent=gems; renderCollection(); collCountEl.textContent=collection.length }
+    function saveState(){ localStorage.setItem('gems',gems); localStorage.setItem('collection',JSON.stringify(collection)) }
+    function rarityColor(r){ const d = rarityTable.find(x=>x.key===r); return d? d.color:'#9aa4bf' }
 
-    function renderCollection(){ collectionEl.innerHTML=''; for(const c of collection){
-      const d = document.createElement('div'); d.className='card';
-      d.innerHTML=`<div class="art">${c.name}<div class="small">(${c.artTag||'placeholder'})</div></div>
-        <div style="margin-top:8px;font-weight:700">${c.name}</div>
-        <div class="small">HP: ${c.hp} | ATK: ${c.atk}</div>
-        <div class="rarity" style="background:${rarityColor(c.rarity)};color:#081427">${c.rarity}</div>`;
-      collectionEl.appendChild(d);
-    }}
+    function render(){ gemsEl.textContent=gems; collCountEl.textContent=collection.length; renderCollection() }
 
-    function rarityColor(r){ const rData = rarityTable.find(x=>x.key===r); return rData? rData.color:'#9aa4bf'}
+    function renderCollection(){ collectionEl.innerHTML=''; const tmpl = document.getElementById('cardTmpl').content; for(let i=collection.length-1;i>=0;i--){ const c = collection[i]; const node = tmpl.cloneNode(true); let html = node.querySelector('.card'); html.querySelectorAll('.flip .face.front img')[0].src = c.img; html.querySelector('.meta > div').textContent = c.name; html.querySelector('.rarity').textContent = c.rarity; html.querySelector('.rarity').style.background = rarityColor(c.rarity); html.querySelector('.face.back').innerHTML = `<div style="text-align:left"><div style="font-weight:800;font-size:16px">${c.name}</div><div class="small" style="margin-top:8px">Rarity: ${c.rarity}</div><div class="small">HP: ${c.hp} | ATK: ${c.atk}</div><div style="height:8px"></div><div class="small">Tap to flip back.</div></div>`;
+      const cardEl = html;
+      // Ultra rare visual treatment
+      if(c.rarity==='Ultra Rare'){ cardEl.querySelector('.image img').style.transform='scale(1.03)'; cardEl.classList.add('ultra'); cardEl.querySelector('.rarity').style.background = 'linear-gradient(90deg,#ffd36b,#ff7ab6)'; }
 
-    function summonOnce(){ if(gems<10){ appendLog('Not enough gems.'); return }
-      gems-=10; const r = pickRarity(); const monster = weightedMonsterForRarity(r);
-      // Tweak stats by rarity
-      const rarityMul = r==='Ultra Rare'?1.8: r==='Mega Rare'?1.5: r==='Super Rare'?1.3: r==='Rare'?1.1:1.0;
-      const card = {name:monster.name, hp: Math.round(monster.hp*rarityMul), atk: Math.round(monster.atk*rarityMul), rarity: r, artTag: monster.art};
-      collection.push(card); saveState(); render(); appendLog(`Summoned ${card.name} (${card.rarity})!`);
+      // flip behavior
+      const flipEl = cardEl.querySelector('.flip'); cardEl.addEventListener('click',()=>{ flipEl.classList.toggle('is-flipped') });
+
+      collectionEl.appendChild(cardEl);
+    } }
+
+    // summon flow with animation
+    function summonOnceAnimated(){ if(gems<10){ alert('Not enough gems'); return }
+      gems -= 10; saveState(); render(); openSummonOverlay();
+      // pick rarity and monster
+      const rarity = pickRarity(); const m = weightedMonsterForRarity(rarity);
+      const rarityMul = rarity==='Ultra Rare'?1.9: rarity==='Mega Rare'?1.5: rarity==='Super Rare'?1.3: rarity==='Rare'?1.1:1.0;
+      const card = { name: m.name, hp: Math.round(m.hp*rarityMul), atk: Math.round(m.atk*rarityMul), rarity: rarity, img: m.img };
+
+      // animate particles and card
+      summonImgTag.src = card.img; summonText.textContent = 'Summoning...'; summonSub.textContent = '';
+      summonCard.classList.remove('shiny'); particlesEl.innerHTML = '';
+      // spawn multiple spark elements
+      for(let i=0;i<14;i++){ const s = document.createElement('div'); s.className='spark'; s.style.left = (10 + Math.random()*80) + '%'; s.style.top = (10 + Math.random()*70) + '%'; s.style.background = i%3===0? 'rgba(255,122,182,.9)' : i%2===0? 'rgba(255,211,107,.9)' : 'rgba(127,211,255,.9)'; s.style.animationDelay = (i*0.05)+'s'; s.style.transform = `scale(${0.6+Math.random()})`; particlesEl.appendChild(s) }
+
+      // shimmer effect if ultra
+      if(card.rarity==='Ultra Rare'){ setTimeout(()=>{ summonCard.classList.add('shiny') },550) }
+
+      // show name after delay and add to collection
+      setTimeout(()=>{ summonText.textContent = `${card.name}`; summonSub.textContent = `${card.rarity} — HP ${card.hp} | ATK ${card.atk}`; collection.push(card); saveState(); render(); },900);
     }
 
-    function summonX(n){ for(let i=0;i<n;i++){ summonOnce() }}
+    function openSummonOverlay(){ summonOverlay.style.display='flex'; }
+    function closeSummonOverlay(){ summonOverlay.style.display='none'; }
 
-    function appendLog(t){ const p=document.createElement('div'); p.textContent=t; logEl.prepend(p); }
+    // multi summon
+    function summonX(n){ let i=0; const loop = ()=>{ if(i>=n) return; summonOnceAnimated(); i++; setTimeout(loop, 1200) }; loop() }
 
-    function quickBattle(){ if(collection.length===0){ appendLog('No cards to fight with — summon first.'); return }
-      const p = collection[Math.floor(Math.random()*collection.length)]; const enemyHP = 30 + Math.floor(Math.random()*40); const enemyAtk = 4 + Math.floor(Math.random()*8);
-      let playerHP = p.hp, log = `Battle: ${p.name} (HP ${p.hp}) vs Random Beast (HP ${enemyHP})`;
-      appendLog(log);
-      while(playerHP>0 && enemyHP>0){ enemyHP -= p.atk; appendLog(`${p.name} hits for ${p.atk}. Enemy HP ${Math.max(0,enemyHP)}`); if(enemyHP<=0) break; playerHP -= enemyAtk; appendLog(`Enemy hits for ${enemyAtk}. ${p.name} HP ${Math.max(0,playerHP)}`); }
-      if(playerHP>0){ appendLog(`Victory! ${p.name} survived with ${playerHP} HP.`); gems +=5; saveState(); render(); }
-      else { appendLog(`${p.name} was defeated.`); }
-    }
-
-    // Buttons
-    document.getElementById('summon').addEventListener('click',()=>summonOnce());
+    // init UI bindings
+    document.getElementById('summon').addEventListener('click',()=>summonOnceAnimated());
     document.getElementById('summon10').addEventListener('click',()=>summonX(10));
-    document.getElementById('battle').addEventListener('click',()=>quickBattle());
-    document.getElementById('clear').addEventListener('click',()=>{ if(confirm('Reset collection?')){ collection.length=0; localStorage.removeItem('collection'); saveState(); render(); appendLog('Collection reset.'); } });
+    document.getElementById('closeSummon').addEventListener('click',()=>{ closeSummonOverlay(); });
+    document.getElementById('reset').addEventListener('click',()=>{ if(confirm('Reset collection?')){ collection.length=0; localStorage.removeItem('collection'); saveState(); render(); } });
 
-    // Age gate
-    const ageGate = document.getElementById('ageGate');
-    document.getElementById('confirmAge').addEventListener('click',()=>{ ageGate.style.display='none'; render(); appendLog('Age confirmed. Have fun!'); });
-    document.getElementById('denyAge').addEventListener('click',()=>{ alert('You must be 18+ to use this content.'); });
+    // age gate
+    document.getElementById('confirmAge').addEventListener('click',()=>{ document.getElementById('ageGate').style.display='none'; });
+    document.getElementById('denyAge').addEventListener('click',()=>{ alert('You must be 18+ to use this content.') });
 
-    // Init
+    // initial render
     render();
   </script></body>
 </html>
