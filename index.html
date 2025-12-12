@@ -1,0 +1,184 @@
+<!-- Sexy Monster Girls: Mobile Web Game (non-explicit, age-gated)
+
+This is a single-file mobile-friendly web game you can open in your phone browser.
+Features:
+- Age gate (18+ confirmation)
+- Gacha summon with rarities: Normal, Rare, Super Rare, Mega Rare, Ultra Rare
+- Simple card objects with name, HP, ATK, rarity
+- Collection stored in localStorage
+- Quick simulated battle vs random monster
+- Art placeholders (you MUST replace with your own artwork that is appropriate and owned by you)
+
+Notes:
+- This project purposefully avoids explicit sexual content. Keep all art suggestive/PG-13 if you plan to distribute.
+- To run: save this as index.html, open it in a mobile browser, or host it.
+--><!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Summon Maidens - Mobile Gacha</title>
+  <style>
+    :root{--bg:#0b1020;--card:#0f1724;--muted:#9aa4bf;--accent:#ff7ab6}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#07101f 0%, #081427 100%);color:#e6eef8}
+    .app{max-width:720px;margin:0 auto;padding:12px}
+    header{display:flex;align-items:center;gap:12px}
+    h1{font-size:20px;margin:0}
+    .age-gate{position:fixed;inset:0;background:rgba(2,6,23,0.95);display:flex;align-items:center;justify-content:center;padding:20px}
+    .panel{background:linear-gradient(180deg,var(--card),#0b1330);border-radius:12px;padding:16px;width:100%;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    .btn{background:var(--accent);border:none;padding:10px 14px;border-radius:10px;color:#081427;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px;align-items:center}
+    .summon-area{margin-top:12px;display:flex;gap:8px}
+    .card{background:linear-gradient(180deg,#0f1a2b,#081427);padding:10px;border-radius:10px;min-width:110px;text-align:center}
+    .art{height:130px;border-radius:8px;background:linear-gradient(180deg,#081427,#0b1330);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+    .rarity{font-weight:800;padding:6px;border-radius:8px;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
+    .small{font-size:12px;color:var(--muted)}
+    .log{margin-top:10px;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;height:72px;overflow:auto;font-size:13px}
+    footer{margin-top:14px;text-align:center;color:var(--muted);font-size:12px}
+    @media(min-width:640px){h1{font-size:22px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Summon Maidens</h1>
+      <div style="flex:1"></div>
+      <div class="muted">Collection: <span id="collection-count">0</span></div>
+    </header><div class="panel" id="main-panel">
+  <div class="row" style="justify-content:space-between">
+    <div>
+      <div class="small">Currency:</div>
+      <div style="font-weight:800">Gems: <span id="gems">100</span></div>
+    </div>
+    <div style="text-align:right">
+      <div class="small">Summon Price</div>
+      <div style="font-weight:800">10 Gems / 1 pull</div>
+    </div>
+  </div>
+
+  <div class="summon-area">
+    <button class="btn" id="summon">Summon (1x)</button>
+    <button class="btn" id="summon10">Summon (10x)</button>
+    <div style="flex:1"></div>
+    <button class="btn" id="clear">Reset Collection</button>
+  </div>
+
+  <div class="log" id="log">Welcome — confirm age to start.</div>
+
+  <div class="grid" id="collection"></div>
+
+  <div style="margin-top:12px" class="row">
+    <button class="btn" id="battle">Quick Battle vs Random Monster</button>
+    <div style="flex:1"></div>
+    <div class="small">Tip: Replace placeholder art with your own images.</div>
+  </div>
+</div>
+
+<footer>Age-gated content. Keep art non-explicit if you share publicly.</footer>
+
+  </div>  <div class="age-gate" id="ageGate">
+    <div class="panel" style="max-width:420px;text-align:center">
+      <h2>Age Confirmation</h2>
+      <p class="muted">This game contains suggestive character art. You must be 18+ to continue. No explicit sexual content is included.</p>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+        <button class="btn" id="confirmAge">I'm 18+</button>
+        <button class="btn" id="denyAge">I'm under 18</button>
+      </div>
+    </div>
+  </div>  <script>
+    // Rarity configuration (probabilities out of 1000)
+    const rarityTable = [
+      {key:'Normal', prob:700, color:'#9aa4bf'},
+      {key:'Rare', prob:200, color:'#7fd3ff'},
+      {key:'Super Rare', prob:80, color:'#d59bff'},
+      {key:'Mega Rare', prob:18, color:'#ffc36b'},
+      {key:'Ultra Rare', prob:2, color:'#ff7ab6'}
+    ];
+
+    const basePool = [
+      // Simple sample monsters; replace or expand
+      {name:'Coblyn', hp:20, atk:4, art:'placeholder1.jpg'},
+      {name:'Frost Nymph', hp:24, atk:6, art:'placeholder2.jpg'},
+      {name:'Ember Siren', hp:30, atk:8, art:'placeholder3.jpg'},
+      {name:'Void Succubus', hp:36, atk:10, art:'placeholder4.jpg'},
+      {name:'Celestial Bride', hp:45, atk:12, art:'placeholder5.jpg'}
+    ];
+
+    // Utilities
+    function pickRarity(){
+      const roll = Math.floor(Math.random()*1000)+1;
+      let acc=0;
+      for(const r of rarityTable){acc+=r.prob; if(roll<=acc) return r.key}
+      return 'Normal';
+    }
+
+    function weightedMonsterForRarity(rarity){
+      // Simple mapping: higher rarities favor stronger pool entries
+      const pool = basePool.map((m,i)=>({ ...m, weight: (i+1) * (rarity==='Ultra Rare'?5:rarity==='Mega Rare'?3:rarity==='Super Rare'?2:1)}));
+      const total = pool.reduce((s,p)=>s+p.weight,0);
+      let r=Math.random()*total; for(const p of pool){if(r<p.weight) return {...p}; r-=p.weight}
+      return {...pool[0]};
+    }
+
+    // Game state
+    let gems = parseInt(localStorage.getItem('gems')||100,10);
+    const collection = JSON.parse(localStorage.getItem('collection')||'[]');
+
+    const logEl = document.getElementById('log');
+    const gemsEl = document.getElementById('gems');
+    const collectionEl = document.getElementById('collection');
+    const collCountEl = document.getElementById('collection-count');
+
+    function saveState(){ localStorage.setItem('gems',gems); localStorage.setItem('collection',JSON.stringify(collection)); }
+    function render(){ gemsEl.textContent=gems; renderCollection(); collCountEl.textContent=collection.length }
+
+    function renderCollection(){ collectionEl.innerHTML=''; for(const c of collection){
+      const d = document.createElement('div'); d.className='card';
+      d.innerHTML=`<div class="art">${c.name}<div class="small">(${c.artTag||'placeholder'})</div></div>
+        <div style="margin-top:8px;font-weight:700">${c.name}</div>
+        <div class="small">HP: ${c.hp} | ATK: ${c.atk}</div>
+        <div class="rarity" style="background:${rarityColor(c.rarity)};color:#081427">${c.rarity}</div>`;
+      collectionEl.appendChild(d);
+    }}
+
+    function rarityColor(r){ const rData = rarityTable.find(x=>x.key===r); return rData? rData.color:'#9aa4bf'}
+
+    function summonOnce(){ if(gems<10){ appendLog('Not enough gems.'); return }
+      gems-=10; const r = pickRarity(); const monster = weightedMonsterForRarity(r);
+      // Tweak stats by rarity
+      const rarityMul = r==='Ultra Rare'?1.8: r==='Mega Rare'?1.5: r==='Super Rare'?1.3: r==='Rare'?1.1:1.0;
+      const card = {name:monster.name, hp: Math.round(monster.hp*rarityMul), atk: Math.round(monster.atk*rarityMul), rarity: r, artTag: monster.art};
+      collection.push(card); saveState(); render(); appendLog(`Summoned ${card.name} (${card.rarity})!`);
+    }
+
+    function summonX(n){ for(let i=0;i<n;i++){ summonOnce() }}
+
+    function appendLog(t){ const p=document.createElement('div'); p.textContent=t; logEl.prepend(p); }
+
+    function quickBattle(){ if(collection.length===0){ appendLog('No cards to fight with — summon first.'); return }
+      const p = collection[Math.floor(Math.random()*collection.length)]; const enemyHP = 30 + Math.floor(Math.random()*40); const enemyAtk = 4 + Math.floor(Math.random()*8);
+      let playerHP = p.hp, log = `Battle: ${p.name} (HP ${p.hp}) vs Random Beast (HP ${enemyHP})`;
+      appendLog(log);
+      while(playerHP>0 && enemyHP>0){ enemyHP -= p.atk; appendLog(`${p.name} hits for ${p.atk}. Enemy HP ${Math.max(0,enemyHP)}`); if(enemyHP<=0) break; playerHP -= enemyAtk; appendLog(`Enemy hits for ${enemyAtk}. ${p.name} HP ${Math.max(0,playerHP)}`); }
+      if(playerHP>0){ appendLog(`Victory! ${p.name} survived with ${playerHP} HP.`); gems +=5; saveState(); render(); }
+      else { appendLog(`${p.name} was defeated.`); }
+    }
+
+    // Buttons
+    document.getElementById('summon').addEventListener('click',()=>summonOnce());
+    document.getElementById('summon10').addEventListener('click',()=>summonX(10));
+    document.getElementById('battle').addEventListener('click',()=>quickBattle());
+    document.getElementById('clear').addEventListener('click',()=>{ if(confirm('Reset collection?')){ collection.length=0; localStorage.removeItem('collection'); saveState(); render(); appendLog('Collection reset.'); } });
+
+    // Age gate
+    const ageGate = document.getElementById('ageGate');
+    document.getElementById('confirmAge').addEventListener('click',()=>{ ageGate.style.display='none'; render(); appendLog('Age confirmed. Have fun!'); });
+    document.getElementById('denyAge').addEventListener('click',()=>{ alert('You must be 18+ to use this content.'); });
+
+    // Init
+    render();
+  </script></body>
+</html>
