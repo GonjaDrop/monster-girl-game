@@ -14,7 +14,13 @@ body {
   padding: 20px;
 }
 
-/* Summon Button */
+/* Gem Counter */
+#gemCount {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+/* Buttons */
 button {
   background: linear-gradient(45deg, #6a00ff, #d900ff);
   border: none;
@@ -22,7 +28,7 @@ button {
   border-radius: 12px;
   color: white;
   font-size: 18px;
-  margin: 20px;
+  margin: 10px;
   box-shadow: 0 0 15px #a200ff;
 }
 
@@ -58,7 +64,6 @@ button {
   overflow: hidden;
 }
 
-/* Front of card */
 .card-front {
   background: #111;
   display: flex;
@@ -73,7 +78,6 @@ button {
   object-fit: cover;
 }
 
-/* Back of card */
 .card-back {
   background: linear-gradient(135deg, #4c0080, #220033);
   transform: rotateY(180deg);
@@ -85,9 +89,9 @@ button {
 }
 
 @keyframes float {
-  0% { transform: translateY(0); }
+  0% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
-  100% { transform: translateY(0); }
+  100% { transform: translateY(0px); }
 }
 
 @keyframes glow {
@@ -106,6 +110,38 @@ button {
   pointer-events: none;
   transition: opacity 0.4s;
 }
+
+/* Collection */
+#collection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.collection-card {
+  width: 120px;
+  text-align: center;
+}
+
+.collection-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+/* UR Animation for Summons */
+@keyframes floatPulse {
+  0% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-8px) scale(1.03); }
+  100% { transform: translateY(0px) scale(1); }
+}
+
+@keyframes glowPulse {
+  0% { filter: drop-shadow(0 0 5px rgb(111,0,255)); }
+  50% { filter: drop-shadow(0 0 15px rgb(200,0,255)); }
+  100% { filter: drop-shadow(0 0 5px rgb(111,0,255)); }
+}
 </style>
 </head>
 
@@ -113,11 +149,14 @@ button {
 
 <h1>Monster Girl Summoner</h1>
 
-<button onclick="summon()">Summon</button>
+<div id="gemCount">Gems: <span id="gems">0</span></div>
+
+<button onclick="summon()">Summon (50 Gems)</button>
+<button onclick="battle()">Battle (+10 Gems)</button>
 
 <div id="summonFlash"></div>
 
-<!-- Card Display -->
+<!-- Summon Card -->
 <div class="card" id="summonCard">
   <div class="card-inner">
     <div class="card-front">
@@ -127,91 +166,57 @@ button {
   </div>
 </div>
 
-<script>
-/* =============================
-      CARD LIST (INCLUDES LILITH)
-   ============================= */
-const cards = [
-  {
-    name: "Cursed Maiden Elise",
-    rarity: "rare",
-    img: "https://picsum.photos/300/450?random=11"
-  },
-  {
-    name: "Hollow Witch Serana",
-    rarity: "super",
-    img: "https://picsum.photos/300/450?random=12"
-  },
-  {
-    name: "Ashen Knight Marielle",
-    rarity: "mega",
-    img: "https://picsum.photos/300/450?random=13"
-  },
+<h2>Your Collection</h2>
+<div id="collection"></div>
 
-  /* ⭐ YOUR ULTRA RARE LILITH ⭐ */
+<script>
+/***********************
+ * PLAYER SYSTEM
+ ***********************/
+let player = {
+  gems: 100,
+  monsters: []
+};
+
+// Load save data
+let save = localStorage.getItem("MG_Save");
+if (save) player = JSON.parse(save);
+
+function saveGame() {
+  localStorage.setItem("MG_Save", JSON.stringify(player));
+}
+
+/***********************
+ * MONSTER CARDS
+ ***********************/
+const cards = [
+  { name: "Cursed Maiden Elise", rarity: "rare", img: "https://picsum.photos/300/450?random=11", hp: 90, atk: 18 },
+  { name: "Hollow Witch Serana", rarity: "super", img: "https://picsum.photos/300/450?random=12", hp: 140, atk: 32 },
+  { name: "Ashen Knight Marielle", rarity: "mega", img: "https://picsum.photos/300/450?random=13", hp: 200, atk: 50 },
+
+  /* ULTRA RARE LILITH */
   {
     name: "Dark Maiden Lilith",
     rarity: "ultra",
     img: "https://raw.githubusercontent.com/GonjaDrop/monster-girl-game/refs/heads/main/file_00000000dc2871fda0c2ee699123839e.png",
-    animated: true,
-    hp: 4500,
-    atk: 950
+    hp: 350,
+    atk: 80,
+    animated: true
   }
 ];
 
-/* =============================
-         SUMMON RARITY RATES
-   ============================= */
+/***********************
+ * RARITY PULL RATES
+ ***********************/
 function pullRarity() {
   let roll = Math.random() * 100;
-
   if (roll < 60) return "rare";
   if (roll < 85) return "super";
   if (roll < 97) return "mega";
-  return "ultra";   // 3% chance
+  return "ultra";
 }
 
-/* =============================
-        SUMMON FLASH EFFECT
-   ============================= */
+/***********************
+ * FLASH EFFECT
+ ***********************/
 function flashEffect() {
-  let flash = document.getElementById("summonFlash");
-  flash.style.opacity = 1;
-
-  setTimeout(() => {
-    flash.style.opacity = 0;
-  }, 300);
-}
-
-/* =============================
-          MAIN SUMMON
-   ============================= */
-function summon() {
-  flashEffect();
-
-  const rarity = pullRarity();
-  const possible = cards.filter(c => c.rarity === rarity);
-  const chosen = possible[Math.floor(Math.random() * possible.length)];
-
-  const card = document.getElementById("summonCard");
-  const img = document.getElementById("cardImage");
-
-  // Apply card art
-  img.src = chosen.img;
-
-  // Remove previous UR effects
-  img.parentElement.classList.remove("ultra-card");
-
-  // If Ultra, add animation class
-  if (chosen.rarity === "ultra") {
-    img.parentElement.classList.add("ultra-card");
-  }
-
-  // Play flip animation
-  card.classList.add("flip");
-  setTimeout(() => { card.classList.remove("flip"); }, 1200);
-}
-</script>
-
-</body>
-</html>
