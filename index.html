@@ -1,293 +1,384 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Monster Girl Summoner</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monster Girl Summoner — Lilith Edition</title>
 <style>
-body {
-  background: #0b0b0f;
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
-  padding: 20px;
-}
+  :root{
+    --bg1:#07101f; --bg2:#081427; --muted:#9aa4bf; --accent:#ff7ab6; --gold:#ffd36b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter, system-ui, -apple-system, Roboto, Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:#e6eef8;min-height:100vh}
+  .app{max-width:980px;margin:0 auto;padding:18px}
+  header{display:flex;gap:12px;align-items:center}
+  h1{margin:0;font-size:20px}
+  .muted{color:var(--muted);font-size:13px}
 
-/* Gem Counter */
-#gemCount {
-  font-size: 24px;
-  margin-bottom: 20px;
-}
+  /* controls */
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:12px;padding:12px;margin-top:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{background:linear-gradient(180deg,var(--accent),#ff5fa0);border:none;padding:10px 14px;border-radius:10px;color:#081427;font-weight:800;cursor:pointer}
+  .btn.alt{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04)}
+  #gems{font-weight:800}
 
-/* Buttons */
-button {
-  background: linear-gradient(45deg, #6a00ff, #d900ff);
-  border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
-  color: white;
-  font-size: 18px;
-  margin: 10px;
-  box-shadow: 0 0 15px #a200ff;
-}
+  /* collection grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-top:12px}
+  .card{background:linear-gradient(180deg,#0b1624,#071225);border-radius:10px;padding:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);text-align:center}
+  .card .img{height:170px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .card img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s}
+  .rarity{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:800;margin-top:8px}
 
-/* Card Container */
-.card {
-  width: 260px;
-  height: 380px;
-  margin: 20px auto;
-  position: relative;
-  perspective: 1000px;
-}
+  /* summon overlay (cinematic) */
+  .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.7);display:flex;align-items:center;justify-content:center;z-index:80;backdrop-filter:blur(3px)}
+  .overlay.hidden{display:none}
+  .summon-box{width:92%;max-width:560px;background:linear-gradient(180deg,#081427,#06121f);border-radius:12px;padding:14px;text-align:center;box-shadow:0 20px 80px rgba(3,6,15,0.7)}
+  .summon-card{width:220px;height:320px;margin:10px auto;border-radius:10px;overflow:hidden;position:relative;transform-origin:center center}
+  .summon-card img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block}
+  .summon-text{font-weight:800;margin-top:10px}
+  .summon-sub{color:var(--muted);font-size:13px;margin-top:6px}
 
-.card-inner {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.8s;
-}
+  /* particles */
+  .particle{position:absolute;border-radius:50%;pointer-events:none;filter:blur(6px);opacity:0}
 
-.card.flip .card-inner {
-  transform: rotateY(180deg);
-}
+  /* Ultra Rare special visuals */
+  .ultra-card img{
+    animation: float 3s ease-in-out infinite, glow 2.6s ease-in-out infinite;
+  }
+  @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-10px)}100%{transform:translateY(0)}}
+  @keyframes glow{0%{filter:drop-shadow(0 0 3px #a000ff80)}50%{filter:drop-shadow(0 0 18px #ff00ffdd)}100%{filter:drop-shadow(0 0 3px #a000ff80)}}
 
-.card-front,
-.card-back {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  border: 3px solid #ffffff55;
-  border-radius: 18px;
-  overflow: hidden;
-}
+  /* flip inspector (click to flip) */
+  .flip-wrap{perspective:1400px}
+  .flip-inner{width:100%;height:100%;transform-style:preserve-3d;transition:transform .8s}
+  .is-flipped{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:8px;overflow:hidden}
+  .face.back{transform:rotateY(180deg);background:linear-gradient(180deg,#081427,#04101a);display:flex;align-items:center;justify-content:center;color:var(--muted);padding:12px}
 
-.card-front {
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-}
-
-.card-front img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.card-back {
-  background: linear-gradient(135deg, #4c0080, #220033);
-  transform: rotateY(180deg);
-}
-
-/* Ultra Rare Animation */
-.ultra-card img {
-  animation: float 3s ease-in-out infinite, glow 2s ease-in-out infinite;
-}
-
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
-}
-
-@keyframes glow {
-  0% { filter: drop-shadow(0 0 2px #a000ff80); }
-  50% { filter: drop-shadow(0 0 14px #ff00ffdd); }
-  100% { filter: drop-shadow(0 0 2px #a000ff80); }
-}
-
-/* Summon Flash */
-#summonFlash {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  background: radial-gradient(circle, #a000ff77, #000000aa);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.4s;
-}
-
-/* Collection */
-#collection {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.collection-card {
-  width: 120px;
-  text-align: center;
-}
-
-.collection-card img {
-  width: 100%;
-  border-radius: 10px;
-}
-
-/* UR Animation for Summons */
-@keyframes floatPulse {
-  0% { transform: translateY(0px) scale(1); }
-  50% { transform: translateY(-8px) scale(1.03); }
-  100% { transform: translateY(0px) scale(1); }
-}
-
-@keyframes glowPulse {
-  0% { filter: drop-shadow(0 0 5px rgb(111,0,255)); }
-  50% { filter: drop-shadow(0 0 15px rgb(200,0,255)); }
-  100% { filter: drop-shadow(0 0 5px rgb(111,0,255)); }
-}
+  footer{margin-top:18px;color:var(--muted);font-size:13px}
+  @media(min-width:720px){h1{font-size:24px}}
 </style>
 </head>
-
 <body>
+  <div class="app">
+    <header><h1>Summon Maidens — Lilith Edition</h1><div style="flex:1"></div><div class="muted">Collection: <span id="collCount">0</span></div></header>
 
-<h1>Monster Girl Summoner</h1>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div><div class="muted">Gems</div><div id="gems">100</div></div>
+        <div style="text-align:right"><div class="muted">Summon</div><div class="muted">50 Gems / Pull</div></div>
+      </div>
 
-<div id="gemCount">Gems: <span id="gems">0</span></div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <button class="btn" id="summonBtn">Summon (1x)</button>
+        <button class="btn" id="summon10Btn">Summon (10x)</button>
+        <div style="flex:1"></div>
+        <button class="btn alt" id="resetBtn">Reset Save</button>
+      </div>
 
-<button onclick="summon()">Summon (50 Gems)</button>
-<button onclick="battle()">Battle (+10 Gems)</button>
-
-<div id="summonFlash"></div>
-
-<!-- Summon Card -->
-<div class="card" id="summonCard">
-  <div class="card-inner">
-    <div class="card-front">
-      <img id="cardImage" src="">
+      <div class="muted" style="margin-top:8px">Tip: Lilith (Ultra Rare) has special animation on summon and floats in collection.</div>
+      <div class="grid" id="collection"></div>
     </div>
-    <div class="card-back"></div>
+
+    <footer>Age-gated content (18+). Keep art non-explicit for sharing.</footer>
   </div>
-</div>
 
-<h2>Your Collection</h2>
-<div id="collection"></div>
-let gems = parseInt(localStorage.getItem("gems")) || 0;
-let cardCollection = JSON.parse(localStorage.getItem("cardCollection")) || [];
+  <!-- Summon overlay -->
+  <div id="summonOverlay" class="overlay hidden" aria-hidden="true">
+    <div class="summon-box" role="dialog" aria-modal="true">
+      <div id="particles" style="position:relative;height:220px"></div>
+      <div class="summon-card" id="summonCard">
+        <img id="summonImg" src="" alt="Summoned" />
+        <div class="shine" style="position:absolute;inset:0;pointer-events:none;transform:translateX(-120%);transition:transform .9s ease"></div>
+      </div>
+      <div class="summon-text" id="summonName">Summoning...</div>
+      <div class="summon-sub" id="summonRarity"></div>
+      <div style="margin-top:10px"><button class="btn" id="closeSummon">Close</button></div>
+    </div>
+  </div>
 
-// ---------------------------
-// CARD POOL
-// ---------------------------
-const cards = {
-    common: [
-        { name: "Forest Sprite", rarity: "Common", image: "images/common1.png", attack: 5, hp: 20 },
-        { name: "Cave Goblette", rarity: "Common", image: "images/common2.png", attack: 6, hp: 18 },
-        { name: "Slime Maiden", rarity: "Common", image: "images/common3.png", attack: 4, hp: 22 }
-    ],
-    rare: [
-        { name: "Red Oni", rarity: "Rare", image: "images/rare1.png", attack: 12, hp: 30 }
-    ],
-    superrare: [
-        { name: "Storm Harpy", rarity: "Super Rare", image: "images/sr1.png", attack: 18, hp: 35 }
-    ],
-    megarare: [
-        { name: "Abyssal Naga", rarity: "Mega Rare", image: "images/mr1.png", attack: 25, hp: 45 }
-    ],
-    ultrarare: [
-        {
-            name: "Dark Maiden Lilith",
-            rarity: "Ultra Rare",
-            image: "https://raw.githubusercontent.com/GonjaDrop/monster-girl-game/refs/heads/main/file_00000000dc2871fda0c2ee699123839e.png",
-            attack: 45,
-            hp: 80
-        }
-    ]
+<script>
+/* ====== Game constants and save keys ====== */
+const SAVE_KEY = "MG_Lilith_Save_v1";
+const STARTER_FLAG = "MG_Lilith_starter_v1";
+const SUMMON_COST = 50;
+
+/* ====== Card pools (replace images if you want) ====== */
+const CARD_POOL = {
+  common: [
+    { name:"Forest Sprite", rarity:"Common", img:"https://picsum.photos/seed/common1/400/600", atk:6, hp:24 },
+    { name:"Cave Goblette", rarity:"Common", img:"https://picsum.photos/seed/common2/400/600", atk:5, hp:22 },
+    { name:"Slime Maiden", rarity:"Common", img:"https://picsum.photos/seed/common3/400/600", atk:4, hp:26 }
+  ],
+  rare:[
+    { name:"Ghoul Maiden Elise", rarity:"Rare", img:"https://picsum.photos/seed/rare1/400/600", atk:16, hp:90 }
+  ],
+  super:[
+    { name:"Hollow Witch Serana", rarity:"Super", img:"https://picsum.photos/seed/super1/400/600", atk:30, hp:140 }
+  ],
+  mega:[
+    { name:"Ashen Knight Marielle", rarity:"Mega", img:"https://picsum.photos/seed/mega1/400/600", atk:50, hp:200 }
+  ],
+  ultra:[
+    {
+      name:"Dark Maiden Lilith",
+      rarity:"Ultra",
+      img:"https://raw.githubusercontent.com/GonjaDrop/monster-girl-game/refs/heads/main/file_00000000dc2871fda0c2ee699123839e.png",
+      atk:80, hp:350, animated:true
+    }
+  ]
 };
 
-// ---------------------------
-// GIVE NEW PLAYERS 2 COMMON CARDS
-// ---------------------------
-function giveStarterCards() {
-    if (localStorage.getItem("starterGiven")) return;  // already received
+/* ====== Game state ====== */
+let state = {
+  gems: 100,
+  monsters: []
+};
 
-    let starter1 = cards.common[Math.floor(Math.random() * cards.common.length)];
-    let starter2 = cards.common[Math.floor(Math.random() * cards.common.length)];
-
-    cardCollection.push(starter1, starter2);
-
-    localStorage.setItem("cardCollection", JSON.stringify(cardCollection));
-    localStorage.setItem("starterGiven", "true");
-
-    alert("You received 2 starter Common cards!");
+/* ====== Save / Load ====== */
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw) state = JSON.parse(raw);
+  }catch(e){ console.warn("load error", e); }
+}
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ console.warn("save error", e); }
 }
 
-// Run the starter check when game loads
-giveStarterCards();
-
-// ---------------------------
-// UPDATE DISPLAY
-// ---------------------------
-function updateDisplay() {
-    document.getElementById("gems").textContent = gems;
-    document.getElementById("cardCount").textContent = cardCollection.length;
+/* ====== Starter cards (grant once) ====== */
+function giveStarterCardsIfNeeded(){
+  try{
+    if(localStorage.getItem(STARTER_FLAG)) return;
+    const pool = CARD_POOL.common;
+    // random two commons (can be same)
+    const a = cloneCard(pool[Math.floor(Math.random()*pool.length)]);
+    const b = cloneCard(pool[Math.floor(Math.random()*pool.length)]);
+    state.monsters.push(a,b);
+    localStorage.setItem(STARTER_FLAG,"1");
+    save();
+    // friendly notice
+    setTimeout(()=> alert("Welcome! You received 2 starter Common cards so you can battle and earn gems."), 120);
+  }catch(e){ console.warn("starter error", e); }
 }
 
-updateDisplay();
-
-// ---------------------------
-// SUMMONING
-// ---------------------------
-function summonCard() {
-    if (gems < 10) {
-        alert("Not enough gems!");
-        return;
-    }
-
-    gems -= 10;
-
-    let roll = Math.random();
-    let rarity;
-
-    if (roll < 0.60) rarity = "common";
-    else if (roll < 0.80) rarity = "rare";
-    else if (roll < 0.93) rarity = "superrare";
-    else if (roll < 0.98) rarity = "megarare";
-    else rarity = "ultrarare";
-
-    let pool = cards[rarity];
-    let card = pool[Math.floor(Math.random() * pool.length)];
-
-    cardCollection.push(card);
-
-    localStorage.setItem("gems", gems);
-    localStorage.setItem("cardCollection", JSON.stringify(cardCollection));
-
-    updateDisplay();
-
-    alert("You summoned: " + card.name + " (" + card.rarity + ")");
+/* ====== Helpers ====== */
+function cloneCard(c){
+  return {
+    name: c.name,
+    rarity: c.rarity,
+    img: c.img,
+    atk: c.atk || 5,
+    hp: c.hp || 20,
+    animated: !!c.animated
+  };
+}
+function pickRarity(){
+  const r = Math.random();
+  if(r < 0.60) return "common";
+  if(r < 0.85) return "rare";
+  if(r < 0.97) return "super";
+  if(r < 0.995) return "mega";
+  return "ultra";
 }
 
-// ---------------------------
-// SIMPLE BATTLE FOR GEMS
-// ---------------------------
-function battle() {
-    if (cardCollection.length === 0) {
-        alert("You need at least one card!");
-        return;
-    }
+/* ====== UI rendering ====== */
+const collectionEl = document.getElementById("collection");
+const collCountEl = document.getElementById("collCount");
+const gemsEl = document.getElementById("gems");
 
-    let randomCard = cardCollection[Math.floor(Math.random() * cardCollection.length)];
-
-    let enemyHP = 20 + Math.floor(Math.random() * 15);
-    let playerAttack = randomCard.attack;
-
-    if (playerAttack >= enemyHP) {
-        let reward = 5 + Math.floor(Math.random() * 10);
-        gems += reward;
-        alert(`Your ${randomCard.name} defeated the enemy! You earned ${reward} gems!`);
-    } else {
-        alert(`Your ${randomCard.name} was too weak… no gems earned.`);
-    }
-
-    localStorage.setItem("gems", gems);
-    updateDisplay();
+function renderCollection(){
+  if(!collectionEl) return;
+  collectionEl.innerHTML = state.monsters.map((m,i)=>{
+    const isUltra = (m.rarity || "").toLowerCase() === "ultra" || m.animated;
+    return `<div class="card" data-idx="${i}">
+      <div class="img ${isUltra? 'ultra-card':''}">
+        <img src="${m.img}" alt="${m.name}" />
+      </div>
+      <div style="margin-top:8px;font-weight:700">${m.name}</div>
+      <div class="rarity" style="background:${rarityColor(m.rarity)};color:#081427">${m.rarity}</div>
+    </div>`;
+  }).join("");
+  collCountEl.innerText = state.monsters.length;
+  if(gemsEl) gemsEl.innerText = state.gems;
+}
+function rarityColor(r){
+  if(!r) return 'linear-gradient(90deg,#9aa4bf,#9aa4bf)';
+  const key = (r||'').toLowerCase();
+  if(key.includes('common')) return '#9aa4bf';
+  if(key.includes('rare')) return '#7fd3ff';
+  if(key.includes('super')) return '#d59bff';
+  if(key.includes('mega')) return '#ffc36b';
+  if(key.includes('ultra')) return 'linear-gradient(90deg,#ffd36b,#ff7ab6)';
+  return '#9aa4bf';
 }
 
+/* ====== Summon cinematic & logic ====== */
+const overlay = document.getElementById("summonOverlay");
+const summonImg = document.getElementById("summonImg");
+const summonName = document.getElementById("summonName");
+const summonRarity = document.getElementById("summonRarity");
+const particles = document.getElementById("particles");
+const closeSummonBtn = document.getElementById("closeSummon");
 
-  
+function spawnParticles(count, colors){
+  particles.innerHTML = "";
+  for(let i=0;i<count;i++){
+    const p = document.createElement("div");
+    p.className = "particle";
+    const size = 8 + Math.random()*18;
+    p.style.width = p.style.height = size + "px";
+    p.style.left = (10 + Math.random()*80) + "%";
+    p.style.top = (10 + Math.random()*60) + "%";
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    p.style.background = color;
+    p.style.opacity = "0";
+    p.style.transition = "transform .9s ease, opacity .9s ease";
+    particles.appendChild(p);
+    // animate
+    setTimeout(()=>{ p.style.opacity = "1"; p.style.transform = `translateY(${ -20 - Math.random()*40 }px) scale(${1 + Math.random()*0.3})`; }, 50 + i*30);
+    setTimeout(()=>{ p.style.opacity = "0"; }, 900 + Math.random()*400);
+  }
+}
+
+function openSummonOverlay(card){
+  overlay.classList.remove("hidden");
+  summonImg.src = card.img;
+  summonName.textContent = card.name;
+  summonRarity.textContent = card.rarity + (card.atk? ` — ATK ${card.atk} | HP ${card.hp}` : '');
+  // special ultra effects
+  if((card.rarity||"").toLowerCase() === "ultra" || card.animated){
+    spawnParticles(18, ['rgba(255,122,182,0.95)','rgba(255,211,107,0.95)','rgba(127,211,255,0.85)']);
+    // shine bar sweep
+    const shine = summonImg.parentElement.querySelector('.shine');
+    if(shine) setTimeout(()=> shine.style.transform = 'translateX(120%)', 250);
+    // add ultra class for float & glow
+    summonImg.classList.add('ultra-card');
+  } else {
+    spawnParticles(8, ['rgba(255,255,255,0.06)']);
+    summitRemoveUltraClass();
+  }
+}
+
+function closeSummonOverlay(){
+  overlay.classList.add("hidden");
+  // reset shine
+  const shine = summonImg.parentElement.querySelector('.shine');
+  if(shine) shine.style.transform = 'translateX(-120%)';
+  summonImg.classList.remove('ultra-card');
+  particles.innerHTML = "";
+}
+
+function summitRemoveUltraClass(){
+  summonImg.classList.remove('ultra-card');
+}
+
+closeSummonBtn.addEventListener('click', closeSummonOverlay);
+
+/* Summon main */
+function summonOnce(){
+  if(state.gems < SUMMON_COST){ alert(`Not enough gems (need ${SUMMON_COST})`); return; }
+  state.gems -= SUMMON_COST;
+  save();
+  // rarity & pick
+  const key = pickRarity();
+  const pool = CARD_POOL[key] && CARD_POOL[key].length ? CARD_POOL[key] : CARD_POOL.common;
+  const chosen = cloneCard(pool[Math.floor(Math.random()*pool.length)]);
+  state.monsters.push(chosen);
+  // show cinematic
+  openSummonOverlay(chosen);
+  // flip the main card after a short delay (visual)
+  const mainCard = document.getElementById("summonCard");
+  if(mainCard){ mainCard.classList.add("flip"); setTimeout(()=> mainCard.classList.remove("flip"), 1200); }
+  renderCollection();
+}
+
+/* mass summon (10x) */
+let summonQueueLock = false;
+async function summonX(n){
+  if(summonQueueLock) return;
+  summonQueueLock = true;
+  for(let i=0;i<n;i++){
+    if(state.gems < SUMMON_COST) { alert("Out of gems"); break; }
+    summonOnce();
+    await new Promise(r=>setTimeout(r, 1100)); // wait per-summon
+  }
+  summonQueueLock = false;
+}
+
+/* ====== Battle (earn gems) ====== */
+function battle(){
+  if(!state.monsters || state.monsters.length === 0){
+    alert("You have no cards to fight with.");
+    return;
+  }
+  const pick = state.monsters[Math.floor(Math.random()*state.monsters.length)];
+  const enemyHP = 20 + Math.floor(Math.random()*70);
+  const atk = pick.atk || 5;
+  if(atk >= enemyHP){
+    const reward = 5 + Math.floor(Math.random()*11);
+    state.gems += reward;
+    save();
+    alert(`Victory! ${pick.name} earned ${reward} gems.`);
+  } else {
+    alert(`${pick.name} failed to defeat the foe.`);
+  }
+  renderCollection();
+}
+
+/* ====== Reset Save (for testing) ====== */
+function resetSave(){
+  if(!confirm("Reset your save? This clears collection and gems.")) return;
+  localStorage.removeItem(SAVE_KEY);
+  localStorage.removeItem(STARTER_FLAG);
+  // reload initial state and render
+  state = { gems:100, monsters:[] };
+  giveStarterCardsIfNeeded();
+  save();
+  renderCollection();
+}
+
+/* ====== Init + Bindings ====== */
+function renderCollection(){
+  save();
+  renderCollectionStatic();
+}
+function renderCollectionStatic(){
+  // re-render UI
+  document.getElementById("gems").innerText = state.gems;
+  collCountEl.innerText = state.monsters.length;
+  // build grid
+  if(!collectionEl) return;
+  collectionEl.innerHTML = state.monsters.map((m, idx) => {
+    const isUltra = (m.rarity||'').toLowerCase() === 'ultra' || m.animated;
+    return `<div class="card" data-idx="${idx}">
+      <div class="img ${isUltra? 'ultra-card':''}">
+        <img src="${m.img}" alt="${m.name}" />
+      </div>
+      <div style="margin-top:8px;font-weight:700">${m.name}</div>
+      <div class="rarity" style="background:${rarityColor(m.rarity)};color:#081427">${m.rarity}</div>
+    </div>`;
+  }).join("");
+  save();
+}
+
+/* ====== Startup ====== */
+(function init(){
+  loadSave();
+  giveStarterCardsIfNeeded();
+  renderCollectionStatic();
+})();
+
+/* Bind UI buttons */
+document.getElementById('summonBtn').addEventListener('click', ()=> summonOnce());
+document.getElementById('summon10Btn').addEventListener('click', ()=> summonX(10));
+document.getElementById('resetBtn').addEventListener('click', resetSave);
+
+// expose some functions to global scope (for inline onclick compatibility)
+window.summon = summonOnce;
+window.battle = battle;
+window.summonX = summonX;
+
+</script>
+</body>
+</html>
