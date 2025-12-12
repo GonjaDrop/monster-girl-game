@@ -181,13 +181,35 @@ function pickRarity(){
   if(r < 0.995) return "mega";
   return "ultra";
 }
+function rarityColor(r){
+  if(!r) return '#9aa4bf';
+  const key = (r||'').toLowerCase();
+  if(key.includes('common')) return '#9aa4bf';
+  if(key.includes('rare')) return '#7fd3ff';
+  if(key.includes('super')) return '#d59bff';
+  if(key.includes('mega')) return '#ffc36b';
+  if(key.includes('ultra')) return '#ffd36b';
+  return '#9aa4bf';
+}
 
-/* ====== UI rendering ====== */
+/* ====== UI elements (cached) ====== */
 const collectionEl = document.getElementById("collection");
 const collCountEl = document.getElementById("collCount");
 const gemsEl = document.getElementById("gems");
+const overlay = document.getElementById("summonOverlay");
+const summonImg = document.getElementById("summonImg");
+const summonName = document.getElementById("summonName");
+const summonRarity = document.getElementById("summonRarity");
+const particles = document.getElementById("particles");
+const closeSummonBtn = document.getElementById("closeSummon");
 
+/* ====== UI rendering ====== */
 function renderCollection(){
+  // update top UI
+  if(gemsEl) gemsEl.innerText = state.gems;
+  if(collCountEl) collCountEl.innerText = state.monsters.length;
+
+  // render grid
   if(!collectionEl) return;
   collectionEl.innerHTML = state.monsters.map((m,i)=>{
     const isUltra = (m.rarity || "").toLowerCase() === "ultra" || m.animated;
@@ -199,29 +221,12 @@ function renderCollection(){
       <div class="rarity" style="background:${rarityColor(m.rarity)};color:#081427">${m.rarity}</div>
     </div>`;
   }).join("");
-  collCountEl.innerText = state.monsters.length;
-  if(gemsEl) gemsEl.innerText = state.gems;
-}
-function rarityColor(r){
-  if(!r) return 'linear-gradient(90deg,#9aa4bf,#9aa4bf)';
-  const key = (r||'').toLowerCase();
-  if(key.includes('common')) return '#9aa4bf';
-  if(key.includes('rare')) return '#7fd3ff';
-  if(key.includes('super')) return '#d59bff';
-  if(key.includes('mega')) return '#ffc36b';
-  if(key.includes('ultra')) return 'linear-gradient(90deg,#ffd36b,#ff7ab6)';
-  return '#9aa4bf';
+  save();
 }
 
-/* ====== Summon cinematic & logic ====== */
-const overlay = document.getElementById("summonOverlay");
-const summonImg = document.getElementById("summonImg");
-const summonName = document.getElementById("summonName");
-const summonRarity = document.getElementById("summonRarity");
-const particles = document.getElementById("particles");
-const closeSummonBtn = document.getElementById("closeSummon");
-
+/* ====== Particles & cinematic ====== */
 function spawnParticles(count, colors){
+  if(!particles) return;
   particles.innerHTML = "";
   for(let i=0;i<count;i++){
     const p = document.createElement("div");
@@ -242,6 +247,7 @@ function spawnParticles(count, colors){
 }
 
 function openSummonOverlay(card){
+  if(!overlay) return;
   overlay.classList.remove("hidden");
   summonImg.src = card.img;
   summonName.textContent = card.name;
@@ -256,44 +262,43 @@ function openSummonOverlay(card){
     summonImg.classList.add('ultra-card');
   } else {
     spawnParticles(8, ['rgba(255,255,255,0.06)']);
-    summitRemoveUltraClass();
+    summonRemoveUltraClass();
   }
 }
 
 function closeSummonOverlay(){
+  if(!overlay) return;
   overlay.classList.add("hidden");
   // reset shine
   const shine = summonImg.parentElement.querySelector('.shine');
   if(shine) shine.style.transform = 'translateX(-120%)';
   summonImg.classList.remove('ultra-card');
-  particles.innerHTML = "";
+  if(particles) particles.innerHTML = "";
 }
 
-function summitRemoveUltraClass(){
-  summonImg.classList.remove('ultra-card');
+function summonRemoveUltraClass(){
+  if(summonImg) summonImg.classList.remove('ultra-card');
 }
 
-closeSummonBtn.addEventListener('click', closeSummonOverlay);
+if(closeSummonBtn) closeSummonBtn.addEventListener('click', closeSummonOverlay);
 
-/* Summon main */
+/* ====== Summon logic ====== */
 function summonOnce(){
   if(state.gems < SUMMON_COST){ alert(`Not enough gems (need ${SUMMON_COST})`); return; }
   state.gems -= SUMMON_COST;
   save();
-  // rarity & pick
   const key = pickRarity();
   const pool = CARD_POOL[key] && CARD_POOL[key].length ? CARD_POOL[key] : CARD_POOL.common;
   const chosen = cloneCard(pool[Math.floor(Math.random()*pool.length)]);
   state.monsters.push(chosen);
-  // show cinematic
   openSummonOverlay(chosen);
-  // flip the main card after a short delay (visual)
+  // flip visual on summon card element (if present)
   const mainCard = document.getElementById("summonCard");
   if(mainCard){ mainCard.classList.add("flip"); setTimeout(()=> mainCard.classList.remove("flip"), 1200); }
   renderCollection();
 }
 
-/* mass summon (10x) */
+/* mass summon */
 let summonQueueLock = false;
 async function summonX(n){
   if(summonQueueLock) return;
@@ -301,7 +306,7 @@ async function summonX(n){
   for(let i=0;i<n;i++){
     if(state.gems < SUMMON_COST) { alert("Out of gems"); break; }
     summonOnce();
-    await new Promise(r=>setTimeout(r, 1100)); // wait per-summon
+    await new Promise(r=>setTimeout(r, 1100));
   }
   summonQueueLock = false;
 }
@@ -331,54 +336,34 @@ function resetSave(){
   if(!confirm("Reset your save? This clears collection and gems.")) return;
   localStorage.removeItem(SAVE_KEY);
   localStorage.removeItem(STARTER_FLAG);
-  // reload initial state and render
   state = { gems:100, monsters:[] };
   giveStarterCardsIfNeeded();
   save();
   renderCollection();
 }
 
-/* ====== Init + Bindings ====== */
-function renderCollection(){
-  save();
-  renderCollectionStatic();
-}
-function renderCollectionStatic(){
-  // re-render UI
-  document.getElementById("gems").innerText = state.gems;
-  collCountEl.innerText = state.monsters.length;
-  // build grid
-  if(!collectionEl) return;
-  collectionEl.innerHTML = state.monsters.map((m, idx) => {
-    const isUltra = (m.rarity||'').toLowerCase() === 'ultra' || m.animated;
-    return `<div class="card" data-idx="${idx}">
-      <div class="img ${isUltra? 'ultra-card':''}">
-        <img src="${m.img}" alt="${m.name}" />
-      </div>
-      <div style="margin-top:8px;font-weight:700">${m.name}</div>
-      <div class="rarity" style="background:${rarityColor(m.rarity)};color:#081427">${m.rarity}</div>
-    </div>`;
-  }).join("");
-  save();
-}
-
-/* ====== Startup ====== */
+/* ====== Init ====== */
 (function init(){
   loadSave();
   giveStarterCardsIfNeeded();
-  renderCollectionStatic();
+  renderCollection();
 })();
 
-/* Bind UI buttons */
-document.getElementById('summonBtn').addEventListener('click', ()=> summonOnce());
-document.getElementById('summon10Btn').addEventListener('click', ()=> summonX(10));
-document.getElementById('resetBtn').addEventListener('click', resetSave);
+/* ====== UI button bindings ====== */
+const summonBtn = document.getElementById('summonBtn');
+const summon10Btn = document.getElementById('summon10Btn');
+const resetBtn = document.getElementById('resetBtn');
 
-// expose some functions to global scope (for inline onclick compatibility)
-window.summon = summonOnce;
-window.battle = battle;
+if(summonBtn) summonBtn.addEventListener('click', ()=> summonOnce());
+if(summon10Btn) summon10Btn.addEventListener('click', ()=> summonX(10));
+if(resetBtn) resetBtn.addEventListener('click', resetSave);
+
+// expose some functions globally
+window.summonOnce = summonOnce;
 window.summonX = summonX;
+window.battle = battle;
 
 </script>
 </body>
 </html>
+
